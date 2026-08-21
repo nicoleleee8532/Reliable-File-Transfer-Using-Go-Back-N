@@ -1,102 +1,119 @@
-A clean, comprehensive `README.md` formatted for your repository:
+# Reliable File Transfer Using Go-Back-N Protocol
+
+A Python implementation of a reliable file transfer system operating over UDP sockets using the **Go-Back-N (GBN)** sliding window protocol. Developed for the Computer Networks course (2023–2024 Spring) at Beijing Institute of Technology.
 
 ---
 
-# Reliable File Transfer using Go-Back-N Protocol
+## 📌 Metadata
 
-**Course**: Computer Networks (100071011) | **Academic Year**: 2023–2024-2
+* **Student ID:** 1820232039
 
-**Institution**: Beijing Institute of Technology — School of Computer
 
-**Author**: 李恩心 (Li Enxin) | **Student ID**: 1820232039 | **Class**: 86132301
+* **Name:** 李恩心 (Li Enxin)
 
-**Instructor**: 阮思捷 (Ruan Sijie)
 
-**Date**: May 16, 2026
+* **Class No.:** 86132301
+
+
+* **Instructor:** 阮思捷 (Prof. Ruan Sijie)
+
+
+* **Institution:** School of Computer Science, Beijing Institute of Technology
+
+
+* **Date:** May 16, 2026
+
+
 
 ---
 
 ## 1. Project Overview
 
-This project implements a reliable, bidirectional file transfer system over UDP using the **Go-Back-N (GBN)** sliding window protocol. The system reliably transfers large files between hosts despite packet loss, corruption, or out-of-order delivery.
+This project implements a bidirectional, reliable file transfer system over unreliable UDP transport. Based on Chapter 3 (Protocol 5) of *Computer Networks* (A.S. Tanenbaum, 5th Edition), the system guarantees data integrity and order across network conditions featuring packet loss and bit corruption.
 
-The implementation follows the GBN specification described in *Computer Networks* (A.S. Tanenbaum, 5th Edition, Chapter 3, Protocol 5).
+### Key Features
+
+* **Custom PDU Encapsulation:** Includes explicit sequence numbers, acknowledgments, flags, data, and checksum fields.
+* **Sliding Window Control:** Go-Back-N mechanism supporting configurable window sizes.
+* **Error Detection:** 16-bit CRC-CCITT polynomial (`0x1021`) checksum verification.
+* **Network Simulation:** Built-in loss and error wrappers to test protocol resilience.
+* **Logging & Analytics:** Full event logging and performance analysis scripts.
 
 ---
 
-## 2. Protocol Design
+## 2. Protocol & Architecture
 
-### 2.1 Go-Back-N Mechanism
+### Protocol Data Unit (PDU) Structure
 
-* **Sliding Window**: Maintained at sender side with size `SWSize`.
-
-
-* **State Variables**:
-* `base`: Sequence number of the oldest unacknowledged packet.
-
-
-* `nextseqnum`: Sequence number assigned to the next packet to send.
-
-
-
-
-* **Acknowledgments**: Cumulative ACKs.
-
-
-* **Timeout & Retransmission**: On timeout, retransmits all outstanding packets in the range `[base, nextseqnum - 1]`.
-
-
-
-### 2.2 PDU (Frame) Structure
-
-Each UDP datagram encapsulates a custom PDU structure:
+Each UDP datagram carries a structured frame formatted as follows:
 
 ```text
-+----------+----------+---------+------------+----------+
-|  SeqNum  |  AckNum  |  Flags  |    Data    | Checksum |
-|   (4B)   |   (4B)   |  (1B)   |  (<= 4KB)  |   (2B)   |
-+----------+----------+---------+------------+----------+
-```[cite: 2]
++---------------+---------------+-----------+---------------+---------------+
+| SeqNum (4B)   | AckNum (4B)   | Flags(1B) | Data (<=4KB)  | Checksum (2B) |
++---------------+---------------+-----------+---------------+---------------+
+
+```
 
 | Field | Size | Description |
-| :--- | :--- | :--- |
-| `SeqNum` | 4 bytes | Sequence number of the packet[cite: 2] |
-| `AckNum` | 4 bytes | Cumulative acknowledgment number[cite: 2] |
-| `Flags` | 1 byte | `0` = DATA packet, `1` = FIN packet[cite: 2] |
-| `Data` | $\le$ 4 KB | Payload / file chunk data[cite: 2] |
-| `Checksum` | 2 bytes | CRC-CCITT (`0x1021` polynomial) for error detection[cite: 2] |
+| --- | --- | --- |
+| `SeqNum` | 4 Bytes | Packet sequence number |
+| `AckNum` | 4 Bytes | Cumulative acknowledgment number |
+| `Flags` | 1 Byte | `0` = DATA packet, `1` = FIN packet |
+| `Data` | $\le$ 4 KB | File chunk payload |
+| `Checksum` | 2 Bytes | CRC-CCITT (`0x1021`) error detection |
+
+### System Workflow
+
+```text
+HOST 1 (Sender)                                HOST 2 (Receiver)
+  +-----------+                                  +------------+
+  | Read File |                                  | UDP Socket |
+  +-----+-----+                                  +-----+------+
+        |                                              |
+  +-----+-----+                                  +-----+------+
+  | Split Data|                                  | CRC Check  |
+  +-----+-----+                                  +-----+------+
+        |                                              |
+  +-----+-----+     UDP Datagram (PDU)          +------+-----+
+  | GBN Window +------------------------------->+ In-Order?   |
+  +-----+-----+                                 +---+----+---+
+        ^                                           |    |
+        |                                       Yes |    | No
+        |                                           v    v
+        |           Cumulative ACK              +---+----+---+
+        +---------------------------------------+ Send ACK   |
+                                                +------------+
+
+```
 
 ---
 
-## 3. Project Structure
+## 3. Repository Structure
 
 ```text
 .
-├── pdu.py                     # PDU encoding/decoding logic
-├── checksum.py                # CRC-CCITT (0x1021) checksum implementation
-├── sender.py                  # Core sender logic & GBN sliding window
-├── receiver.py                # Core receiver logic & ACK handling
-├── channel.py                 # Network channel abstraction
-├── channel_wrapper.py         # Packet loss & corruption simulation wrapper
-├── bidirectional_sender.py   # Supports simultaneous send/receive
-├── multi_host_sender.py       # Multi-host transfer handling
-├── utils.py                   # Common helper utilities
-├── loganalyzier.py            # Log processing script
-├── analysis.py                # Plotting & performance metrics generator
-├── config.ini                 # Configuration file
-├── create_test_file.py        # Generates test binaries (e.g., input.dat)
-├── test_sender_receiver.py    # Test suit launcher
-├── input.dat                  # Source file for transmission
-├── output.dat / received.dat  # Target output files
-├── sender_log.txt             # Transmission event log
-└── receiver_log.txt           # Reception event log
-```[cite: 2]
+├── config.ini               # Protocol & network parameters
+├── pdu.py                   # PDU encoding/decoding logic
+├── checksum.py              # CRC-CCITT implementation
+├── sender.py                # Single-host sender logic
+├── receiver.py              # Single-host receiver logic
+├── multi_host_sender.py     # Multi-host transfer implementation
+├── bidirectional_sender.py # Bidirectional transfer handler
+├── channel.py               # Low-level network channel simulation
+├── channel_wrapper.py       # Wrapper for loss/error injection
+├── loganalyzier.py          # Log analysis tool
+├── analysis.py              # Performance plotting script
+├── test_sender_receiver.py  # Automated test suite
+├── create_test_file.py      # Test file generator
+└── utils.py                 # Common utility functions
+
+```
 
 ---
 
-## 4. Configuration (`config.ini`)
+## 4. Configuration
 
-Parameters are loaded dynamically from `config.ini`[cite: 2]:
+Network and protocol parameters are managed via `config.ini`:
 
 ```ini
 [COMMUNICATION]
@@ -107,79 +124,77 @@ Timeout = 1000
 ErrorRate = 0
 LostRate = 0
 InitSeqNo = 0
-```[cite: 2]
-
-| Parameter | Value | Description |
-| :--- | :--- | :--- |
-| `UDPPort` | `42039` | Destination UDP communication port[cite: 2] |
-| `DataSize` | `1024` | Data payload size per PDU in bytes[cite: 2] |
-| `SWSize` | `8` | Sender sliding window size[cite: 2] |
-| `Timeout` | `1000` | Retransmission timer in milliseconds[cite: 2] |
-| `ErrorRate` | `0` | Corruption rate ($1/N$ packets corrupted)[cite: 2] |
-| `LostRate` | `0` | Packet loss rate ($1/N$ packets dropped)[cite: 2] |
-| `InitSeqNo` | `0` | Starting packet sequence number[cite: 2] |
-
----
-
-## 5. Usage & Execution
-
-### Prerequisites
-* Python 3.8+[cite: 2]
-* Standard libraries (`socket`, `struct`, `configparser`, `time`, `hashlib`)[cite: 2]
-
-### Running File Transfer
-1. **Generate Test Data**:
-   ```bash
-   python create_test_file.py
-   ```[cite: 2]
-
-2. **Start Receiver**:
-   ```bash
-   python receiver.py
-   ```[cite: 2]
-
-3. **Start Sender** (in a second terminal):
-   ```bash
-   python sender.py
-   ```[cite: 2]
-
-### Running Tests & Verification
-* **Check File Integrity**:
-  ```bash
-  md5 input.dat received.dat
-  ```[cite: 2]
-* **Analyze Logs**:
-  ```bash
-  python loganalyzier.py
-  python analysis.py
-  ```[cite: 2]
-
----
-
-## 6. Key Implementation Highlights
-
-* **CRC-CCITT Error Detection**: Uses standard polynomial `0x1021` with initial seed `0xFFFF` to check payload validity[cite: 2]. Corrupted packets are discarded silently to allow sender timeout recovery[cite: 2].
-* **Simulated Channel Wrapper**: Intercepts `sendto()` calls to introduce probabilistic bit corruption (`ErrorRate`) and packet drops (`LostRate`)[cite: 2].
-* **Cumulative ACK Flow**: Receiver returns `AckNum = expected_seq`[cite: 2]. Un-corrupted out-of-order packets trigger duplicate ACKs for the last correctly received sequence[cite: 2].
-
----
-
-## 7. Performance Overview
-
-Testing performed on local loopback (`127.0.0.1`) with a 3 MB binary test file (`3,145,728` bytes / `3,072` packets)[cite: 2]:
-
-| Test Scenario | Window Size | Error Rate | Loss Rate | Transmitted / Retransmitted | Time (s) | Throughput | MD5 Match |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Ideal** | 8 | 0% | 0% | 3,072 / 0 | 0.256s | ~11.7 MB/s | **PASS** |
-| **Window 16** | 16 | 0% | 0% | 3,072 / 0 | 0.241s | ~12.4 MB/s | **PASS** |
-| **10% Error** | 8 | 10% | 0% | ~3,400 / ~328 | 0.890s | ~3.7 MB/s | **PASS** |
-| **10% Loss** | 8 | 0% | 10% | ~3,400 / ~340 | 0.920s | ~3.6 MB/s | **PASS** |
-
----
-
-## 8. References
-* Tanenbaum, A. S., & Wetherall, D. J. (2011). *Computer Networks* (5th ed.). Pearson Education. (Chapter 3, Protocol 5 - Go-Back-N)[cite: 2]
-* Postel, J. (1980). *User Datagram Protocol*. RFC 768.[cite: 2]
-* ITU-T Recommendation V.41: *Code-independent error control system* (CRC-CCITT standard).[cite: 2]
 
 ```
+
+* **`UDPPort`**: Port used for UDP communication.
+* **`DataSize`**: Data payload length in bytes (1 KB).
+* **`SWSize`**: Maximum sliding window size.
+* **`Timeout`**: Retransmission timer in milliseconds.
+* **`ErrorRate`**: Corrupts 1 out of $N$ packets ($0$ disables corruption).
+* **`LostRate`**: Drops 1 out of $N$ packets ($0$ disables loss).
+
+---
+
+## 5. Getting Started
+
+### Prerequisites
+
+* **Python**: `3.8+`
+* **OS**: Linux, macOS, or Windows
+
+### Running a Transfer
+
+1. **Generate Test File:**
+```bash
+python create_test_file.py
+
+```
+
+
+2. **Start Receiver:**
+```bash
+python receiver.py
+
+```
+
+
+3. **Start Sender:**
+```bash
+python sender.py
+
+```
+
+
+
+### Verify File Integrity
+
+Check that input and output files match:
+
+```bash
+md5 input.dat received.dat
+
+```
+
+---
+
+## 6. Experimental Results
+
+Tested on localhost using a **3 MB** test file (3,072 packets):
+
+| Configuration | Timeouts | Retransmissions | Time (s) | Throughput (pkts/s) | Efficiency |
+| --- | --- | --- | --- | --- | --- |
+| **Window=4, 0% Loss** | 0 | 0 | 0.282 | 10,894 | 100% |
+| **Window=8, 0% Loss** | 0 | 0 | 0.256 | 12,000 | 100% |
+| **Window=16, 0% Loss** | 0 | 0 | 0.241 | 12,746 | 100% |
+| **Window=8, 10% Error** | ~30 | ~328 | 0.890 | 3,820 | ~90% |
+| **Window=8, 10% Loss** | ~35 | ~340 | 0.920 | 3,700 | ~89% |
+
+---
+
+## 7. References
+
+1. Tanenbaum, A. S., & Wetherall, D. J. (2011). *Computer Networks* (5th ed.). Pearson. (Chapter 3, Protocol 5)
+2. Kurose, J. F., & Ross, K. W. (2017). *Computer Networking: A Top-Down Approach* (7th ed.). Pearson.
+3. Postel, J. (1980). *User Datagram Protocol*. RFC 768.
+4. ITU-T Recommendation V.41 (2002). *Code-independent error control system*.
