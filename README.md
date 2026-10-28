@@ -92,22 +92,17 @@ HOST 1 (Sender)                                HOST 2 (Receiver)
 
 ```text
 .
-├── config.ini               # Protocol & network parameters
-├── pdu.py                   # PDU encoding/decoding logic
-├── checksum.py              # CRC-CCITT implementation
-├── sender.py                # Single-host sender logic
-├── receiver.py              # Single-host receiver logic
-├── multi_host_sender.py     # Multi-host transfer implementation
-├── bidirectional_sender.py # Bidirectional transfer handler
-├── channel.py               # Low-level network channel simulation
-├── channel_wrapper.py       # Wrapper for loss/error injection
-├── loganalyzier.py          # Log analysis tool
-├── analysis.py              # Performance plotting script
-├── test_sender_receiver.py  # Automated test suite
-├── create_test_file.py      # Test file generator
-└── utils.py                 # Common utility functions
-
+├── README.md
+├── docs/
+│   ├── file-transfer-system-report.docx
+│   └── file-transfer-system-presentation.pptx
+├── archives/
+│   └── source-project.zip
+└── Week_01/Lab/
+    └── Week_01_intro_to_python.ipynb
 ```
+
+The complete original source project is preserved in `archives/source-project.zip`; the report and presentation are in `docs/`.
 
 ---
 
